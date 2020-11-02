@@ -38,6 +38,12 @@
 #include <unistd.h>
 #include <sys/poll.h>
 
+static void unexport(int exitstat, void *arg)
+{
+	int pin=(intptr_t)arg;
+	SYSFS_GPIO_Unexport(pin);
+}
+
 int SYSFS_GPIO_Export(int Pin)
 {
     char buffer[NUM_MAXBUF];
@@ -51,11 +57,16 @@ int SYSFS_GPIO_Export(int Pin)
     }
 
     len = snprintf(buffer, NUM_MAXBUF, "%d", Pin);
-    write(fd, buffer, len);
+    if (write(fd, buffer, len) == -1) {
+		SYSFS_GPIO_Debug( "Export: Pin%d failed: %m\r\n", Pin);
+		close(fd);
+		return -1;
+	}
     
     SYSFS_GPIO_Debug( "Export: Pin%d\r\n", Pin);
 
     close(fd);
+	on_exit(unexport, (void*)(intptr_t)Pin);
     return 0;
 }
 
@@ -72,7 +83,11 @@ int SYSFS_GPIO_Unexport(int Pin)
     }
 
     len = snprintf(buffer, NUM_MAXBUF, "%d", Pin);
-    write(fd, buffer, len);
+    if (write(fd, buffer, len) == -1) {
+		SYSFS_GPIO_Debug( "Unexport: Pin%d failed: %m\r\n", Pin);
+		close(fd);
+		return -1;
+	}
     
     SYSFS_GPIO_Debug( "Unexport: Pin%d\r\n", Pin);
     
@@ -95,6 +110,7 @@ int SYSFS_GPIO_Direction(int Pin, int Dir)
 
     if (write(fd, &dir_str[Dir == SYSFS_GPIO_IN ? 0 : 3], Dir == SYSFS_GPIO_IN ? 2 : 3) < 0) {
         SYSFS_GPIO_Debug("failed to set direction!\r\n");
+		close(fd);
         return -1;
     }
 
@@ -125,6 +141,7 @@ int SYSFS_GPIO_Edge(int Pin, int edge)
 	if (edge>2) edge=2;
     if (write(fd, edge_str[edge], edge_str_l[edge]) < 0) {
         SYSFS_GPIO_Debug("failed to set edge!\r\n");
+		close(fd);
         return -1;
     }
 
