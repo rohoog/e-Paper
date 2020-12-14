@@ -19,7 +19,9 @@ USELIB_RPI = USE_DEV_LIB
 
 LIB_RPI=-Wl,--gc-sections
 ifeq ($(USELIB_RPI), USE_BCM2835_LIB)
+    LIB_RPI += -L$(subst &,\&,$(CURDIR))/../../../bcm2835-rpi4/usr/local/lib
     LIB_RPI += -lbcm2835 -lm 
+	CFLAGS = -I$(subst &,\&,$(CURDIR))/../../../bcm2835-rpi4/usr/local/include
 else ifeq ($(USELIB_RPI), USE_WIRINGPI_LIB)
     LIB_RPI += -lwiringPi -lm 
 else ifeq ($(USELIB_RPI), USE_DEV_LIB)
@@ -45,6 +47,7 @@ TARGET = epd
 CC = gcc
 MSG = -g -O -ffunction-sections -fdata-sections -Wall
 CFLAGS += $(MSG)
+CFLAGS += -Wl,--gc-sections
 
 RPI_epd:${OBJ_O}
 	echo $(@)

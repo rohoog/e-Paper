@@ -27,8 +27,122 @@
 # THE SOFTWARE.
 #
 ******************************************************************************/
+#define _GNU_SOURCE
+#include <stdio.h>
 #include "EPD_Test.h"
 #include "EPD_1in54b_V2.h"  
+
+__attribute__((noreturn)) void usage(void) {
+	fprintf(stderr, "Usage: epd <imagebase> (base-b.bmp and base-r.bmp must exist in pic directory)");
+	exit(1);
+}
+
+void checkfiles(const char *base, char ***fn, const char **pat, int num)
+{
+	for (int i=0; i<num; i++) {
+		asprintf(fn[i], pat[i], base);
+		if (access(*fn[i], R_OK) != 0) {
+			fprintf(stderr, "%s: Cannot read file\n", *fn[i]);
+			usage();
+		}
+	}
+}
+
+int EPD_1in54b_V2_mytest(int argc, char *argv[])
+{
+	//char *blackfile, *redfile;
+    printf("EPD_1IN54b_V2_mytest Demo\r\n");
+	if (argc < 1) {
+		usage();
+	}
+#if 0
+	checkfiles(argv[1], (char**[]){&blackfile,&redfile},
+			(const char*[]){"pic/%s-b.bmp", "pic/%s-r.bmp"}, 2);
+
+    if(DEV_Module_Init()!=0){
+        return -1;
+    }
+    EPD_1IN54B_V2_Init();
+    //EPD_1IN54B_V2_Clear();
+    DEV_Delay_ms(200);
+    
+    UBYTE *BlackImage, *RedImage;
+    UWORD Imagesize = ((EPD_1IN54B_V2_WIDTH + 7) / 8 ) * EPD_1IN54B_V2_HEIGHT;
+    if((BlackImage = malloc(Imagesize)) == NULL) {
+        printf("Failed to apply for black memory...\r\n");
+        return -1;
+    }
+    if((RedImage = malloc(Imagesize)) == NULL) {
+        printf("Failed to apply for red memory...\r\n");
+        return -1;
+    }
+    printf("NewImage:BlackImage and RedImage\r\n");
+    Paint_NewImage(BlackImage, EPD_1IN54B_V2_WIDTH, EPD_1IN54B_V2_HEIGHT, 90, WHITE);
+    Paint_NewImage(RedImage, EPD_1IN54B_V2_WIDTH, EPD_1IN54B_V2_HEIGHT, 90, WHITE);
+
+#if 1   // show bmp
+    printf("show window BMP-----------------\r\n");
+    printf("read black bmp\r\n");
+    Paint_SelectImage(BlackImage);
+    GUI_ReadBmp(blackfile, 0, 0);
+    printf("read red bmp\r\n");
+    Paint_SelectImage(RedImage);
+    GUI_ReadBmp(redfile, 0, 0);
+
+    EPD_1IN54B_V2_Display(BlackImage, RedImage);
+    DEV_Delay_ms(2000);
+#endif
+#endif
+#if 1
+	if (access(argv[1], R_OK) != 0) {
+		fprintf(stderr, "%s: Cannot read file\n", argv[1]);
+		usage();
+	}
+
+    if(DEV_Module_Init()!=0){
+        return -1;
+    }
+    EPD_1IN54B_V2_Init();
+    //EPD_1IN54B_V2_Clear();
+    DEV_Delay_ms(200);
+    
+    UBYTE *BlackImage, *RedImage;
+    UWORD Imagesize = ((EPD_1IN54B_V2_WIDTH + 7) / 8 ) * EPD_1IN54B_V2_HEIGHT;
+    if((BlackImage = malloc(Imagesize)) == NULL) {
+        printf("Failed to apply for black memory...\r\n");
+        return -1;
+    }
+    if((RedImage = malloc(Imagesize)) == NULL) {
+        printf("Failed to apply for red memory...\r\n");
+        return -1;
+    }
+    printf("NewImage:BlackImage and RedImage\r\n");
+    Paint_NewImage(BlackImage, EPD_1IN54B_V2_WIDTH, EPD_1IN54B_V2_HEIGHT, 90, WHITE);
+    Paint_NewImage(RedImage, EPD_1IN54B_V2_WIDTH, EPD_1IN54B_V2_HEIGHT, 90, WHITE);
+
+    GUI_ReadBmp_3Color(argv[1], 0, 0, BlackImage, RedImage, NULL);
+
+    EPD_1IN54B_V2_Display(BlackImage, RedImage);
+    DEV_Delay_ms(2000);
+#endif
+#if 0
+    printf("Clear...\r\n");
+    EPD_1IN54B_V2_Clear();
+#endif
+    printf("Goto Sleep...\r\n");
+    EPD_1IN54B_V2_Sleep();
+    free(BlackImage);
+    free(RedImage);
+    BlackImage = NULL;
+    RedImage = NULL;
+	//free(blackfile);
+	//free(redfile);
+
+    // close 5V
+    printf("close 5V, Module enters 0 power consumption ...\r\n");
+    DEV_Module_Exit();
+    return 0;
+}
 
 int EPD_1in54b_V2_test(void)
 {

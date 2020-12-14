@@ -11,8 +11,10 @@ void  Handler(int signo)
     exit(0);
 }
 
+extern void EPD_1in54b_V2_mytest(int argc, char *argv[]);
 
-int main(void)
+
+int main(int argc, char *argv[])
 {
     // Exception handling:ctrl + c
     signal(SIGINT, Handler);
@@ -26,7 +28,8 @@ int main(void)
     // EPD_1in54_test();
     // EPD_1in54_V2_test();
     // EPD_1in54b_test();
-	// EPD_1in54b_V2_test();
+	//EPD_1in54b_V2_test();
+	EPD_1in54b_V2_mytest(argc, argv);
     // EPD_1in54c_test();
 
 	// EPD_2in66_test();
