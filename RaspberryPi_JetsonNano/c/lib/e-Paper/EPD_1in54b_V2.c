@@ -93,27 +93,27 @@ void EPD_1IN54B_V2_Init(void)
 {
     EPD_1IN54B_V2_Reset();
 
-    EPD_1IN54B_V2_ReadBusy();   
+    EPD_1IN54B_V2_ReadBusy();
     EPD_1IN54B_V2_SendCommand(0x12);  //SWRESET
-    EPD_1IN54B_V2_ReadBusy();   
+    EPD_1IN54B_V2_ReadBusy();
 
-    EPD_1IN54B_V2_SendCommand(0x01); //Driver output control      
+    EPD_1IN54B_V2_SendCommand(0x01); //Driver output control
     EPD_1IN54B_V2_SendData(0xC7);
     EPD_1IN54B_V2_SendData(0x00);
     EPD_1IN54B_V2_SendData(0x01);
 
-    EPD_1IN54B_V2_SendCommand(0x11); //data entry mode       
+    EPD_1IN54B_V2_SendCommand(0x11); //data entry mode
     EPD_1IN54B_V2_SendData(0x01);
 
-    EPD_1IN54B_V2_SendCommand(0x44); //set Ram-X address start/end position   
+    EPD_1IN54B_V2_SendCommand(0x44); //set Ram-X address start/end position
     EPD_1IN54B_V2_SendData(0x00);
     EPD_1IN54B_V2_SendData(0x18);    //0x18-->(24+1)*8=200
 
-    EPD_1IN54B_V2_SendCommand(0x45); //set Ram-Y address start/end position          
+    EPD_1IN54B_V2_SendCommand(0x45); //set Ram-Y address start/end position
     EPD_1IN54B_V2_SendData(0xC7);    //0xC7-->(199+1)=200
     EPD_1IN54B_V2_SendData(0x00);
     EPD_1IN54B_V2_SendData(0x00);
-    EPD_1IN54B_V2_SendData(0x00); 
+    EPD_1IN54B_V2_SendData(0x00);
 
     EPD_1IN54B_V2_SendCommand(0x3C); //BorderWavefrom
     EPD_1IN54B_V2_SendData(0x05);
@@ -123,7 +123,7 @@ void EPD_1IN54B_V2_Init(void)
 
     EPD_1IN54B_V2_SendCommand(0x4E);   // set RAM x address count to 0;
     EPD_1IN54B_V2_SendData(0x00);
-    EPD_1IN54B_V2_SendCommand(0x4F);   // set RAM y address count to 0X199;    
+    EPD_1IN54B_V2_SendCommand(0x4F);   // set RAM y address count to 199;
     EPD_1IN54B_V2_SendData(0xC7);
     EPD_1IN54B_V2_SendData(0x00);
     EPD_1IN54B_V2_ReadBusy();
@@ -135,22 +135,22 @@ parameter:
 ******************************************************************************/
 void EPD_1IN54B_V2_Clear(void)
 {
-    
-    unsigned int i;	
+
+    unsigned int i;
     EPD_1IN54B_V2_SendCommand(0x24);   //write RAM for black(0)/white (1)
     for(i=0;i<5000;i++)
-    {               
+    {
         EPD_1IN54B_V2_SendData(0xff);
     }
     EPD_1IN54B_V2_SendCommand(0x26);   //write RAM for black(0)/white (1)
     for(i=0;i<5000;i++)
-    {               
+    {
         EPD_1IN54B_V2_SendData(0x00);
     }
     EPD_1IN54B_V2_SendCommand(0x22); //Display Update Control
-    EPD_1IN54B_V2_SendData(0xF7);   
+    EPD_1IN54B_V2_SendData(0xF7);
     EPD_1IN54B_V2_SendCommand(0x20);  //Activate Display Update Sequence
-    EPD_1IN54B_V2_ReadBusy();   
+    EPD_1IN54B_V2_ReadBusy();
 }
 
 /******************************************************************************
@@ -160,24 +160,24 @@ parameter:
 void EPD_1IN54B_V2_Display(const UBYTE *blackimage, const UBYTE *redimage)
 {
     UWORD Width, Height;
-    Width = (EPD_1IN54B_V2_WIDTH % 8 == 0)? (EPD_1IN54B_V2_WIDTH / 8 ): (EPD_1IN54B_V2_WIDTH / 8 + 1);
+    Width = (EPD_1IN54B_V2_WIDTH + 7) / 8;
     Height = EPD_1IN54B_V2_HEIGHT;
 
-     unsigned int i;	
+     unsigned int i;
     EPD_1IN54B_V2_SendCommand(0x24);   //write RAM for black(0)/white (1)
     for(i=0;i<Width*Height;i++)
-    {               
+    {
         EPD_1IN54B_V2_SendData(blackimage[i]);
     }
     EPD_1IN54B_V2_SendCommand(0x26);   //write RAM for black(0)/white (1)
     for(i=0;i<Width*Height;i++)
-    {               
+    {
         EPD_1IN54B_V2_SendData(~redimage[i]);
     }
     EPD_1IN54B_V2_SendCommand(0x22); //Display Update Control
-    EPD_1IN54B_V2_SendData(0xF7);   
+    EPD_1IN54B_V2_SendData(0xF7);
     EPD_1IN54B_V2_SendCommand(0x20);  //Activate Display Update Sequence
-    EPD_1IN54B_V2_ReadBusy();   
+    EPD_1IN54B_V2_ReadBusy();
 }
 
 /******************************************************************************
@@ -187,6 +187,6 @@ parameter:
 void EPD_1IN54B_V2_Sleep(void)
 {
     EPD_1IN54B_V2_SendCommand(0x10); //enter deep sleep
-    EPD_1IN54B_V2_SendData(0x01); 
+    EPD_1IN54B_V2_SendData(0x01);
     DEV_Delay_ms(100);
 }
