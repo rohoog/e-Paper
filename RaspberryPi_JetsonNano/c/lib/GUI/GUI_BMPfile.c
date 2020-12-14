@@ -83,19 +83,26 @@ UBYTE GUI_ReadBmp(const char *path, UWORD Xstart, UWORD Ystart)
         Debug("the bmp Image is not a monochrome bitmap!\n");
         exit(0);
     }
+	// Make sure no compression is used
+	readbyte = bmpInfoHeader.biCompression;
+    if(readbyte != 0) {
+        Debug("the bmp Image is compressed!\n");
+        exit(0);
+    }
 
     // Determine black and white based on the palette
     UWORD i;
     UWORD Bcolor, Wcolor;
-    UWORD bmprgbquadsize = pow(2, bmpInfoHeader.biBitCount);// 2^1 = 2
+    UWORD bmprgbquadsize = 1 << bmpInfoHeader.biBitCount;// 2^1 = 2
+	if (bmpInfoHeader.biClrUsed > 0) {
+		bmprgbquadsize = bmpInfoHeader.biClrUsed;
+	}
     BMPRGBQUAD bmprgbquad[bmprgbquadsize];        //palette
-    // BMPRGBQUAD bmprgbquad[2];        //palette
 
-    for(i = 0; i < bmprgbquadsize; i++){
-    // for(i = 0; i < 2; i++) {
-        fread(&bmprgbquad[i], sizeof(BMPRGBQUAD), 1, fp);
-    }
-    if(bmprgbquad[0].rgbBlue == 0xff && bmprgbquad[0].rgbGreen == 0xff && bmprgbquad[0].rgbRed == 0xff) {
+    fseek(fp, bmpFileHeader.bOffset-(bmprgbquadsize*sizeof(BMPRGBQUAD)), SEEK_SET);
+	fread(bmprgbquad, sizeof(BMPRGBQUAD), bmprgbquadsize, fp);
+    if(bmprgbquad[0].rgbBlue + bmprgbquad[0].rgbGreen + bmprgbquad[0].rgbRed >
+       bmprgbquad[1].rgbBlue + bmprgbquad[1].rgbGreen + bmprgbquad[1].rgbRed ) {
         Bcolor = BLACK;
         Wcolor = WHITE;
     } else {
@@ -133,6 +140,153 @@ UBYTE GUI_ReadBmp(const char *path, UWORD Xstart, UWORD Ystart)
             Paint_SetPixel(Xstart + x, Ystart + y, color);
         }
     }
+    return 0;
+}
+/*************************************************************************
+
+*************************************************************************/
+enum l_colors {C_BLACK, C_RED, C_YELLOW, C_WHITE};
+static UBYTE clipclr(BMPRGBQUAD c)
+{
+	static const UBYTE tab[]={C_BLACK, C_RED, C_YELLOW, C_YELLOW, C_BLACK, C_RED, C_WHITE, C_WHITE};
+	int idx=(c.rgbRed>=128?1:0)+(c.rgbGreen>=128?2:0)+(c.rgbBlue>=128?4:0);
+	return tab[idx];
+}
+
+UBYTE GUI_ReadBmp_3Color(const char *path, UWORD Xstart, UWORD Ystart, UBYTE *b_image, UBYTE *r_image, UBYTE *y_image)
+{
+    FILE *fp;                     //Define a file pointer
+    BMPFILEHEADER bmpFileHeader;  //Define a bmp file header structure
+    BMPINFOHEADER bmpInfoHeader;  //Define a bmp info header structure
+
+
+    // Binary file open
+    if((fp = fopen(path, "rb")) == NULL) {
+        Debug("Can't open the file!\n");
+        exit(0);
+    }
+
+    // Set the file pointer from the beginning
+    fseek(fp, 0, SEEK_SET);
+    fread(&bmpFileHeader, sizeof(BMPFILEHEADER), 1, fp);    //sizeof(BMPFILEHEADER) must be 14
+    fread(&bmpInfoHeader, sizeof(BMPINFOHEADER), 1, fp);    //sizeof(BMPINFOHEADER) must be 50
+    printf("pixel = %d * %d\r\n", bmpInfoHeader.biWidth, bmpInfoHeader.biHeight);
+
+    UWORD Image_Width_Byte = (bmpInfoHeader.biWidth + 1) / 2;
+    UWORD Bmp_Width_Byte = (Image_Width_Byte + 3) & ~3;
+
+    // Determine if it is a monochrome bitmap
+    int readbyte = bmpInfoHeader.biBitCount;
+    if(readbyte != 4) {
+        Debug("the bmp Image is not a 3-color pallette bitmap!\n");
+        exit(0);
+    }
+	// Make sure no compression is used
+    if(bmpInfoHeader.biCompression != 0) {
+        Debug("the bmp Image is compressed!\n");
+        exit(0);
+    }
+
+    // Determine black, white and red/yellow based on the palette
+    UWORD bmprgbquadsize = 1 << bmpInfoHeader.biBitCount;// 2^1 = 2
+	if (bmpInfoHeader.biClrUsed > 0) {
+		bmprgbquadsize = bmpInfoHeader.biClrUsed;
+	}
+    BMPRGBQUAD bmprgbquad[bmprgbquadsize];        //palette
+	UBYTE map[1 << bmpInfoHeader.biBitCount];
+	memset(map, 0, sizeof map);
+
+    fseek(fp, bmpFileHeader.bOffset-(bmprgbquadsize*sizeof(BMPRGBQUAD)), SEEK_SET);
+	fread(bmprgbquad, sizeof(BMPRGBQUAD), bmprgbquadsize, fp);
+	for (int i=0; i<bmprgbquadsize; i++) {
+		map[i]=clipclr(bmprgbquad[i]);
+		static const char *clrstr[]={"black", "red", "yellow", "white"};
+		Debug("palette[%d]=%s\n",i,clrstr[map[i]]);
+	}
+
+    // Read image data and paint the pixels
+    UWORD x, xb, y, yp;
+    UDOUBLE Rdata[1];
+    UBYTE color;
+    fseek(fp, bmpFileHeader.bOffset, SEEK_SET);
+    for(y = 0; y < bmpInfoHeader.biHeight; y++) {//Total display column
+        for(xb = 0; xb < Bmp_Width_Byte; xb+=sizeof Rdata) {//Show a line in the line
+			readbyte = sizeof Rdata;
+			if (Bmp_Width_Byte-xb < readbyte) readbyte=Bmp_Width_Byte-xb;
+            if(fread(Rdata, 1, readbyte, fp) != readbyte) {
+                perror("get bmpdata:\r\n");
+                break;
+            }
+			UDOUBLE temp=be32toh(Rdata[0]);
+			yp = (bmpInfoHeader.biHeight - y - 1);
+			if (Ystart + yp >= Paint.Height) continue;
+			for (x=xb*2; x<(xb+sizeof Rdata)*2; x++) {
+				if(Xstart + x >= Paint.Width) break;
+				color = map[(temp >> (sizeof Rdata*8-4))];
+				temp <<= 4;
+				switch (color) {
+					case C_BLACK:
+						if (b_image) {
+							Paint_SelectImage(b_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, BLACK);
+						}
+						if (r_image) {
+							Paint_SelectImage(r_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						if (y_image) {
+							Paint_SelectImage(y_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						break;
+					case C_RED:
+						if (b_image) {
+							Paint_SelectImage(b_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						if (r_image) {
+							Paint_SelectImage(r_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, BLACK);
+						}
+						if (y_image) {
+							Paint_SelectImage(y_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						break;
+					case C_YELLOW:
+						if (b_image) {
+							Paint_SelectImage(b_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						if (r_image) {
+							Paint_SelectImage(r_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						if (y_image) {
+							Paint_SelectImage(y_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, BLACK);
+						}
+						break;
+					case C_WHITE:
+						if (b_image) {
+							Paint_SelectImage(b_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						if (r_image) {
+							Paint_SelectImage(r_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						if (y_image) {
+							Paint_SelectImage(y_image);
+							Paint_SetPixel(Xstart + x, Ystart + yp, WHITE);
+						}
+						break;
+				}
+			}
+        }
+    }
+    fclose(fp);
+
     return 0;
 }
 /*************************************************************************
@@ -226,7 +380,7 @@ UBYTE GUI_ReadBmp_RGB_7Color(const char *path, UWORD Xstart, UWORD Ystart)
     UBYTE Image[Image_Byte];
     memset(Image, 0xFF, Image_Byte);
 
-    // Determine if it is a monochrome bitmap
+    // Determine if it is a RGB true-color bitmap
     int readbyte = bmpInfoHeader.biBitCount;
     if(readbyte != 24){
         Debug("Bmp image is not 24 bitmap!\n");

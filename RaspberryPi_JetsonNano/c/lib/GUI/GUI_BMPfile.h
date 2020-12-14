@@ -50,7 +50,7 @@
 
 #include "DEV_Config.h"
 
-/*Bitmap file header   14bit*/
+/*Bitmap file header   14byte*/
 typedef struct BMP_FILE_HEADER {
     UWORD bType;        //File identifier
     UDOUBLE bSize;      //The size of the file
@@ -59,7 +59,7 @@ typedef struct BMP_FILE_HEADER {
     UDOUBLE bOffset;    //The offset from the beginning of the file header to the beginning of the image data bit
 } __attribute__ ((packed)) BMPFILEHEADER;    // 14bit
 
-/*Bitmap information header  40bit*/
+/*Bitmap information header  40byte*/
 typedef struct BMP_INFO {
     UDOUBLE biInfoSize;      //The size of the header
     UDOUBLE biWidth;         //The width of the image
@@ -84,6 +84,8 @@ typedef struct RGB_QUAD {
 /**************************************** end ***********************************************/
 
 UBYTE GUI_ReadBmp(const char *path, UWORD Xstart, UWORD Ystart);
+UBYTE GUI_ReadBmp_3Color(const char *path, UWORD Xstart, UWORD Ystart, UBYTE *b_image, UBYTE *r_image, UBYTE *y_image);
+UBYTE GUI_ReadBmp_7Color(const char *path, UWORD Xstart, UWORD Ystart);
 UBYTE GUI_ReadBmp_4Gray(const char *path, UWORD Xstart, UWORD Ystart);
 UBYTE GUI_ReadBmp_RGB_7Color(const char *path, UWORD Xstart, UWORD Ystart);
 #endif
